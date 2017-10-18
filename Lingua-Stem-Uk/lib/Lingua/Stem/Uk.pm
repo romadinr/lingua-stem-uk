@@ -13,7 +13,7 @@ BEGIN {
     @EXPORT_OK   = qw (stem stem_word clear_stem_cache stem_caching);
     %EXPORT_TAGS = ();
 }
-$VERSION = "0.01";
+$VERSION = "0.02";
 
 my $Stem_Caching  = 0;
 my $Stem_Cache    = {};
@@ -27,6 +27,10 @@ my $VERB         = qr/((іла|ила|ена|ейте|уйте|іть|іли|и�
 my $NOUN         = qr/(а|ев|ов|іе|ье|е|іями|ями|ами|еї|ії|и|ією|ею|єю|ой|ий|й|иям|ям|ием|ем|ам|ом|о|у|ах|іях|ях|и|і|ь|ію|ью|ю|ия|ья|я)$/;
 my $RVRE         = qr/^(.*?[$VOWEL])(.*)$/;
 my $DERIVATIONAL = qr/[^$VOWEL][$VOWEL]+[^$VOWEL]+[$VOWEL].*(?<=і)сть?$/;
+my $SINGULARITY  = {
+'пальн' => ['пальне','пального','пальному','пальним'],
+'запал' => ['запал','запалу','запалом','запалі'],
+};
 
 sub stem {
     return [] if ($#_ == -1);
@@ -91,6 +95,21 @@ sub stem_word {
      my ($start, $RV) = $word =~ /$RVRE/;
      return $word unless $RV;
 
+     # Step 0 - check for singularity
+     my $s0 = '';
+     foreach my $sk (keys %{$SINGULARITY}) {
+        if ($word =~ /$sk/) {
+            for (my $i=0; $i<@{$SINGULARITY->{$sk}}; $i++) {
+                if ($word eq $SINGULARITY->{$sk}->[$i]) {
+                    $s0 = $sk;
+                    last;
+                } 
+            }
+        }
+        last if $s0;
+     } 
+     return $s0 if $s0;
+     
      # Step 1
      unless ($RV =~ s/$PERFECTIVEGROUND//) {
          $RV =~ s/$REFLEXIVE//;
